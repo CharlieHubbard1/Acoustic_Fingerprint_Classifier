@@ -1,0 +1,169 @@
+=======================================
+	Classifier File Structure 
+=======================================
+Version: 0.9
+Classifier (folder)
+--- classifier_notes.txt
+--- classifier_path.m
+
+--- Data to Classify (folder)
+	-- Folder containing data (folder)
+		- data_to_classify_1.mat
+		- data_to_classify_n.mat
+--- Datasets (folder)
+	-- dataset_index (folder) | index = three digit whole number as string; index2 = 1 character string
+		- dataset_index_index2.mat
+		- dataset_index_nextindex2.mat
+	-- dataset_nextIndex (folder)
+		- data_nextindex_index2.mat
+		- data_nextindex_nextindex2.mat
+	-- (pattern repeats)
+
+--- Echo Data (folder)
+	-- Steel Analogs (folder)
+		- UniqID run N.mat | e.g hollow cone run 2.mat
+	-- MK-23 Bomblets (folder)
+		- (more runs)
+	-- (more folders)
+		- (more runs)
+
+--- Fingerprint Metadata (folder)
+	-- all_metadata_values.txt
+	-- Steel Analogs (folder)
+		- UniqID run N.mat | e.g hollow cone run 2 w metadata.mat
+	-- MK-23 Bomblets (folder)
+		- (more runs w metadata)
+	-- (more folders)
+		- (more runs w metadata)
+
+--- Functions (folder)
+	-- acousticFingerprintGraph.m
+	-- acousticFingerprintkNN.m
+	-- build_dataset.m
+	-- build_dataset_from_folder.m
+	-- build_dataset_from_structs.m
+	-- build_feature_vector.m
+	-- featurize_one_sample.m
+	-- find_model_file.m
+	-- knn_graph.m
+	-- kNNdatastruct.m
+	-- load_params.m
+	-- master_params.m
+	-- predict_one_file.m
+	-- progress_eta.m
+	-- resolve_input_files.m
+	-- save_params.m
+	-- train_from_saved_dataset.m
+
+--- Models (folder)
+	-- Model_index (folder)
+		- Model_index_index2.mat
+		- Model_index_nextindex2.mat
+	-- Model_nextindext (folder)
+		- Model_nextindex_index2.mat
+		- Model_nextindex_nextindex2.mat
+	-- (Pattern Repeats)
+
+--- Params (folder)
+	-- params_index.mat
+	
+--- Predictions (folder)
+	-- predictions_index (folder)
+		- fname_prediction_index_index2.mat
+			fname: name of run in Echo Data or Fingerprint Metadata
+			       e.g. hollow_cone_run_1, hollow_cone_run_1_w_metadata
+			       swap 'space' delimiter for '_' delimiter
+			       e.g. hollow cone run 1 becomes hollow_cone_run_1
+--- Scripts (folder)
+	-- classifier_path.m
+	-- step01_define_params.m
+	-- step02_edit_metadata.m
+	-- step03_build_dataset.m
+	-- step04_train_model.m
+	-- step05_classify.m
+
+
+==========================================
+	File naming conventions
+==========================================
+
+Raw Data: Classifier\Echo Data\folderName\fileName.mat
+Data + Metadata: Classifier\Fingerprint Metadata\folderName\fileName w metadata.mat
+Parameter Set: Classifier\Params\params_index.mat
+Dataset: Classifier\Datasets\dataset_index\data_index_index2.mat
+Model: Classifier\Models\Model_index_index2.mat
+Prediction: Classifier\Predictions\predictions_index\Model_index_index2_prediction_predictedFileName
+
+================================
+	Desired Behavior
+================================
+
+## Installation and set-up ##
+
+Place the Classifier folder in the MATLAB folder. Then run classifier_path.m from the command line.
+classifier_path.m does these things automatically. 
+1. Get the name of the root folder. classifier_path.m is in the root folder (a.k.a. the Classifier folder)
+2. Create a string for the absolute path of the root folder e.g. "C:\...\MATLAB\Classifier"
+3. Save the string as class_path.mat file in the root folder (overwrite if existing).
+4. Verify that there is an equivalent " w metadata" file and folder in Fingerprint Metadata for each file and folder in Echo Data. If not, create the " w metadata" file.
+5. Create a readable table containing all the metadata Fields and all their possible Values and save it as the file all_metadata_values.txt
+
+** Note: classifier_path_should be run anytime files and folders are added to or removed from Echo Data
+
+## Workflow ##
+
+** Note that all steps can be performed independently of each other (with a blank variable workspace)
+** step scripts should be able to retrieve necessary data files, dataset files, and model files if any exist
+
+step01_define_params
+1. Manually define all the variables to be saved to the parameter set. Leave unspecified (= '') to use default values.
+2. Press run to save parameters to Params\params_index.
+	- index is a 3 letter serial number converted to string parameter sets.
+	- if index is unspecified, default to lowest unused serial number.
+
+step02_edit_metadata (independent of step01 because it does not require the input of a parameter set)
+Edits existing " w metadata" files in Fingerprint Metadata
+1. Specify the files to be edited
+	Option 1: Manually enter the Echo Data file names (e.g. "OC Tube run 1") between braces.
+		  Then automatically add " w metadata" to the filenames to create the selection.
+	Option 2: Use Field Value pairs (e.g. {'Material', "316L Stainless Steel"})
+		  Above example selects all files in Fingerprint Metadata with
+		  'Material' field having value "316 Stainless Steel"
+2. Press run
+3. Type {'Field',"Value"} into the command line and hit enter to add the field and value or
+   replace the value in the existing field. Files within the same selection may or may not
+   share all the same metadata fields. {'Field',[]} should delete the value in the field
+4. Type stopEdit into the command line and hit enter to save all updates and end the script.
+
+step03_build_dataset
+Build a dataset for training models
+1. Specify index, which determines the correct params_index.mat file to use
+2. Choose selection of training data by manual entry between braces or using Field Value pairs.
+   Default is all files in all folders in Fingerprint Metadata if selection is not specified (='').
+3. Choose index2, which distinguishes between datasets that use the same parameters
+   but different training data selections. index2 is a capital letter string e.g. 'A'. If unspecified (='')
+   index2 defaults to lowest index2 value not already used by a file in Datasets\dataset_index\
+   The dataset_index folder contains all dataset files built using params_index.mat.
+4. Press run. Script automatically does:
+----- Build k-NN graphs + spectral features for each file in the selection.
+----- Assemble the dataset file and save it to Datasets\dataset_index\dataset_index_index2.mat.
+
+step04_train_model
+Train a model 
+1. Specify index and index2, index specifies the correct Params\params_index.mat file
+   index 2 specifies the dataset to use (Datasets\dataset_index\dataset_index_index2.mat)
+   if unspecified (=''), index = the highest index value (most recent) that exists in Params
+2. Press run. Script trains model then saves trained model file to Models\Model_index\Model_index_index2.mat.
+
+step05_classify
+Classify a dataset using a trained model
+1. Specify the location of the files to classify (either in Echo Data or Data to Classify).
+2. Specify index and index2. If unspecified (='') index defaults to the highest (most recent) index value in Params. index2 defaults to the the highest (most recent) index value in Models\Models_index\. Now the correct model file (Model_index_index2.mat) will be used. 
+3. Press run. Script builds kNN-graph and spectral features for the file to classify (just like in step03_build_dataset). Then, script uses the specified model to classify the data in the file to classify. Finally, saves the prediction to Predictions\predictions_index\fname_prediction_index_index2.mat. It should also output a summary of the top matches from the dataset and their cosine similarities to the classified data file.
+
+
+
+
+
+
+		       
